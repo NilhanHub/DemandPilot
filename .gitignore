@@ -3,6 +3,18 @@ dist/
 .env
 .env.local
 .env.*.local
-demandpilot (4).zip
-_extract_demandpilot4/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+_extract*/
+_zip_test*/
+*.zip
 Evidence/
+.firebase/
+firebase-debug.log
+.vercel/
+.netlify/
