@@ -16,7 +16,7 @@ export interface Keyword {
 
 export type ContentStatus = 'Draft' | 'Needs Review' | 'Approved' | 'Scheduled' | 'Published Manually' | 'Copied for Posting' | 'Archived' | 'Rejected';
 
-export type ContentType = 'LinkedIn Post' | 'SEO Article' | 'Google Ad Copy' | 'LinkedIn Ad Copy' | 'Podcast Script' | 'YouTube Shorts Script' | 'TikTok/Reels Script' | 'Email Newsletter';
+export type ContentType = 'Generic Text Post' | 'LinkedIn Post' | 'SEO Article' | 'Google Ad Copy' | 'LinkedIn Ad Copy' | 'Podcast Script' | 'YouTube Shorts Script' | 'TikTok/Reels Script' | 'Email Newsletter';
 
 export interface ContentItem {
   id: string;
@@ -43,6 +43,18 @@ export interface ContentItem {
   aiModel?: string;
   selectedKeywords?: string[];
   keywordStrategy?: string;
+  destinations?: string[];
+  publishMode?: 'draft' | 'publish_now';
+  publicationResults?: Record<string, PublicationResult>;
+}
+
+export interface PublicationResult {
+  destination: 'linkedin' | 'wordpress' | 'x' | string;
+  status: 'not_configured' | 'ready' | 'publishing' | 'published' | 'failed' | 'manual_export_required';
+  externalId?: string;
+  externalUrl?: string;
+  errorMessage?: string;
+  publishedAt?: string;
 }
 
 export interface Connector {

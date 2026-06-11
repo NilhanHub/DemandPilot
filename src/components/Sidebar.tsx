@@ -1,13 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Edit3, Send, Calendar, Settings, Activity, Layers, LogOut, Cloud } from 'lucide-react';
+import { LayoutDashboard, FileText, Edit3, Send, Calendar, Settings, Activity, Layers, LogOut, Cloud, PenTool, Share2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { auth, logout } from '../lib/firebase';
 
 const navItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Keyword Lab', href: '/keywords', icon: Layers },
-  { name: 'Content Studio', href: '/studio', icon: Edit3 },
-  { name: 'LinkedIn Publisher', href: '/publish', icon: Send },
+  { name: 'Campaign Builder', href: '/studio', icon: PenTool },
+  { name: 'Test Publisher', href: '/test-publisher', icon: PenTool },
+  { name: 'LinkedIn Post', href: '/linkedin', icon: Share2 },
   { name: 'Content Library', href: '/library', icon: FileText },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Brand Settings', href: '/settings', icon: Settings },

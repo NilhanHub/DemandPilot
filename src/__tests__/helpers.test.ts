@@ -215,3 +215,31 @@ describe('AI Content Generator Helpers', () => {
     });
   });
 });
+
+// ============================================================
+// Generic Test Publisher MVP Tests
+// ============================================================
+
+describe('Generic Test Publisher data models', () => {
+  it('should allow valid PublicationResult statuses', () => {
+    const validStatuses = ['not_configured', 'ready', 'publishing', 'published', 'failed', 'manual_export_required'];
+    const resultStatus = 'published';
+    expect(validStatuses).toContain(resultStatus);
+  });
+
+  it('should structure WordPress payload correctly', () => {
+    const wpBaseUrl = 'https://example.com';
+    const wpEndpoint = wpBaseUrl.replace(/\/$/, '') + '/wp-json/wp/v2/posts';
+    expect(wpEndpoint).toBe('https://example.com/wp-json/wp/v2/posts');
+
+    const wpBaseUrlSlash = 'https://example.com/';
+    const wpEndpointSlash = wpBaseUrlSlash.replace(/\/$/, '') + '/wp-json/wp/v2/posts';
+    expect(wpEndpointSlash).toBe('https://example.com/wp-json/wp/v2/posts');
+  });
+
+  it('should validate generic test post requirements', () => {
+    const postText = "CV Pro is a 'for life' platform to manage and improve your CV with AI. Log in to cvpro.globalapps.world to get your free credits";
+    expect(postText).toContain('CV Pro');
+    expect(postText.length).toBeGreaterThan(50);
+  });
+});

@@ -11,6 +11,7 @@ import { ContentLibrary } from './pages/ContentLibrary';
 import { Calendar } from './pages/Calendar';
 import { BrandSettings } from './pages/BrandSettings';
 import { Connectors } from './pages/Connectors';
+import { TestPublisher } from './pages/TestPublisher';
 import { initAuth, googleSignIn } from './lib/firebase';
 import { User } from 'firebase/auth';
 
@@ -126,6 +127,7 @@ export default function App() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="settings" element={<BrandSettings />} />
             <Route path="connectors" element={<Connectors />} />
+            <Route path="test-publisher" element={<TestPublisher />} />
           </Route>
         </Routes>
       </BrowserRouter>
