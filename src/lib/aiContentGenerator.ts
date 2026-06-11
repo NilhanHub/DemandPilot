@@ -1,106 +1,89 @@
 import { GoogleGenAI } from '@google/genai';
 
-export interface AIGenerationParams {
-  keyword: string;
+export interface ExtractionResponse {
+  extractedKeywords: string[];
+  highPriorityKeywords: string[];
+  keywordGroups: {
+    groupName: string;
+    keywords: string[];
+    intent: string;
+  }[];
+  recommendedPrimaryKeyword: string;
+  recommendedSecondaryKeywords: string[];
+  notes: string;
+}
+
+export interface CampaignContentParams {
+  instruction: string;
   brand: string;
   brandVoice: string;
+  outputType: string;
+  extractedKeywords: string[];
+  // Advanced fields that might have default/inferred values
   geography: string;
   audience: string;
-  contentType: string;
   tone: string;
   cta: string;
   length: string;
 }
 
-export interface AIGeneratedContent {
+export interface CampaignContentResponse {
   title: string;
   hook: string;
   body: string;
   cta: string;
   hashtags: string[];
-  notes: string;
-  platform: string;
-  contentType: string;
+  selectedKeywords: string[];
+  keywordStrategy: string;
   riskFlags: string[];
-  sourceMode: "user_keyword_only";
-  disclaimer: string;
+  sourceMode: "keyword_screenshot" | "keyword_csv" | "manual_keywords";
 }
 
-export async function generateContent(params: AIGenerationParams): Promise<AIGeneratedContent> {
+export async function extractKeywordsFromSource(source: string, type: 'image' | 'text'): Promise<ExtractionResponse> {
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    if (type === 'image') {
+      throw new Error('Screenshot parsing not configured yet. Please paste keywords manually as a fallback.');
+    }
+    throw new Error('AI generation is not configured yet. Missing VITE_GEMINI_API_KEY.');
+  }
+
+  // Not implemented fully yet because we enforce throwing the error for now as per instructions.
+  throw new Error('Not implemented: AI key found but implementation pending');
+}
+
+export async function generateCampaignContent(params: CampaignContentParams, imageSource?: string): Promise<CampaignContentResponse> {
   const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('AI generation is not configured yet. Missing VITE_GEMINI_API_KEY.');
   }
 
-  const ai = new GoogleGenAI({ apiKey });
-
-  const prompt = `
-Generate content based ONLY on the following parameters.
-- Use only the user-provided keyword and brand profile.
-- Do not claim live trend data.
-- Do not claim search volume.
-- Do not claim LinkedIn analytics.
-- Do not invent statistics.
-- Do not promise guaranteed results.
-- Match the selected brand voice.
-- Write practical, clear, publishable content.
-
-Parameters:
-Keyword: ${params.keyword}
-Brand: ${params.brand}
-Brand Voice: ${params.brandVoice}
-Geography: ${params.geography}
-Audience: ${params.audience}
-Content Type: ${params.contentType}
-Tone: ${params.tone}
-CTA: ${params.cta}
-Length: ${params.length}
-
-Respond ONLY with a valid JSON object matching this schema:
-{
-  "title": "string",
-  "hook": "string",
-  "body": "string",
-  "cta": "string",
-  "hashtags": ["string"],
-  "notes": "string",
-  "platform": "string",
-  "contentType": "string",
-  "riskFlags": ["string"],
-  "sourceMode": "user_keyword_only",
-  "disclaimer": "string"
+  // Not implemented fully yet because we enforce throwing the error for now as per instructions.
+  throw new Error('Not implemented: AI key found but implementation pending');
 }
-`;
 
+export function parseExtractionResponse(text: string): ExtractionResponse {
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-        }
-    });
-
-    const text = response.text;
-    if (!text) throw new Error("Empty response from AI");
-    
-    return parseAIResponse(text);
-  } catch (error: any) {
-    console.error("AI Generation failed:", error);
-    throw new Error(error.message || 'AI generation failed');
+      return JSON.parse(text) as ExtractionResponse;
+  } catch (e) {
+      try {
+          const repaired = text.replace(/```json/g, '').replace(/```/g, '').trim();
+          return JSON.parse(repaired) as ExtractionResponse;
+      } catch (repairError) {
+          throw new Error("Invalid JSON returned from AI extraction");
+      }
   }
 }
 
-export function parseAIResponse(text: string): AIGeneratedContent {
+export function parseCampaignResponse(text: string): CampaignContentResponse {
     try {
-        return JSON.parse(text) as AIGeneratedContent;
+        return JSON.parse(text) as CampaignContentResponse;
     } catch (e) {
-        // Attempt one safe repair
         try {
             const repaired = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(repaired) as AIGeneratedContent;
+            return JSON.parse(repaired) as CampaignContentResponse;
         } catch (repairError) {
-            throw new Error("Invalid JSON returned from AI");
+            throw new Error("Invalid JSON returned from AI content generation");
         }
     }
 }

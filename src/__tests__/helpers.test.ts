@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeHashtags, formatCopiedContent, parseAIResponse } from '../lib/aiContentGenerator';
+import { normalizeHashtags, formatCopiedContent, parseExtractionResponse, parseCampaignResponse } from '../lib/aiContentGenerator';
 
 // ============================================================
 // Status Normalization Tests
@@ -179,21 +179,39 @@ describe('AI Content Generator Helpers', () => {
     });
   });
 
-  describe('parseAIResponse', () => {
+  describe('parseCampaignResponse', () => {
     it('should parse valid JSON', () => {
       const validJSON = JSON.stringify({ title: 'Test Title' });
-      const parsed = parseAIResponse(validJSON);
+      const parsed = parseCampaignResponse(validJSON);
       expect(parsed.title).toBe('Test Title');
     });
 
     it('should repair markdown JSON blocks', () => {
       const markdownJSON = "```json\n{ \"title\": \"Repaired Title\" }\n```";
-      const parsed = parseAIResponse(markdownJSON);
+      const parsed = parseCampaignResponse(markdownJSON);
       expect(parsed.title).toBe('Repaired Title');
     });
 
     it('should throw error on completely invalid JSON', () => {
-      expect(() => parseAIResponse('not a json object')).toThrow('Invalid JSON returned from AI');
+      expect(() => parseCampaignResponse('not a json object')).toThrow('Invalid JSON returned from AI');
+    });
+  });
+
+  describe('parseExtractionResponse', () => {
+    it('should parse valid JSON extraction', () => {
+      const validJSON = JSON.stringify({ recommendedPrimaryKeyword: 'testing' });
+      const parsed = parseExtractionResponse(validJSON);
+      expect(parsed.recommendedPrimaryKeyword).toBe('testing');
+    });
+
+    it('should repair markdown JSON blocks', () => {
+      const markdownJSON = "```json\n{ \"extractedKeywords\": [\"test\"] }\n```";
+      const parsed = parseExtractionResponse(markdownJSON);
+      expect(parsed.extractedKeywords[0]).toBe('test');
+    });
+
+    it('should throw error on completely invalid JSON', () => {
+      expect(() => parseExtractionResponse('not a json object')).toThrow('Invalid JSON returned from AI');
     });
   });
 });

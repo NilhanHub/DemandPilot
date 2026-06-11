@@ -39,8 +39,10 @@ export interface ContentItem {
   plannedDate?: string;
   geography?: string;
   audience?: string;
-  sourceMode?: "user_keyword_only";
+  sourceMode?: "user_keyword_only" | "keyword_screenshot" | "keyword_csv" | "manual_keywords";
   aiModel?: string;
+  selectedKeywords?: string[];
+  keywordStrategy?: string;
 }
 
 export interface Connector {
