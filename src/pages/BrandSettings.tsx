@@ -33,9 +33,15 @@ export function BrandSettings() {
   const handleSave = async () => {
     if (!formData) return;
     setIsSaving(true);
-    await updateBrandSettings(formData.id, formData);
-    setIsSaving(false);
-    toast.success(`${formData.id} settings saved securely.`);
+    try {
+      await updateBrandSettings(formData.id, formData);
+      toast.success(`${formData.id} settings saved securely.`);
+    } catch (err) {
+      console.error('Failed to save brand settings:', err);
+      toast.error('Failed to save brand settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

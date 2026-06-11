@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { AppProvider } from './store/AppContext';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
@@ -24,8 +24,9 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       if (result) {
         onLogin();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login failed:', err);
+      toast.error(err?.message || 'Sign-in failed. Please try again.');
     } finally {
       setIsLoggingIn(false);
     }

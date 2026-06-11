@@ -100,9 +100,14 @@ export function ContentStudio() {
     navigate('/library');
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`${title}\n\n${hook}\n\n${body}\n\n${hashtags}`);
-    toast.success('Content copied to clipboard');
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${title}\n\n${hook}\n\n${body}\n\n${hashtags}`);
+      toast.success('Content copied to clipboard');
+    } catch (err) {
+      console.error('Clipboard write failed:', err);
+      toast.error('Failed to copy to clipboard. Please copy manually.');
+    }
   };
 
   const handleKeepExport = async () => {

@@ -40,14 +40,19 @@ export function LinkedInPublisher() {
     }
   }, [location.state, contents]);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!body) {
       toast.error('Nothing to copy yet.');
       return;
     }
-    navigator.clipboard.writeText(`${body}\n\n${cta}\n\n${hashtags}`);
-    setStatus('Copied for Posting');
-    toast.success('Post copied to clipboard');
+    try {
+      await navigator.clipboard.writeText(`${body}\n\n${cta}\n\n${hashtags}`);
+      setStatus('Copied for Posting');
+      toast.success('Post copied to clipboard');
+    } catch (err) {
+      console.error('Clipboard write failed:', err);
+      toast.error('Failed to copy to clipboard. Please copy manually.');
+    }
   };
 
   const isUrlValid = (url: string) => {
@@ -70,8 +75,7 @@ export function LinkedInPublisher() {
     
     try {
       if (editId) {
-        await updateContent({
-          id: editId,
+        await updateContent(editId, {
           title: `LinkedIn Post: ${body.substring(0, 20)}...`,
           brand,
           keywordId,
@@ -112,8 +116,9 @@ export function LinkedInPublisher() {
         setStatus('Draft');
       }
       setStatus(finalStatus);
-    } catch (e) {
-      // Error handled by context
+    } catch (e: any) {
+      console.error('Save failed:', e);
+      toast.error('Failed to save LinkedIn record. Please try again.');
     }
   };
 

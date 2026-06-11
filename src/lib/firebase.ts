@@ -8,7 +8,9 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 const provider = new GoogleAuthProvider();
-provider.addScope('https://www.googleapis.com/auth/keep');
+// Google Keep scope is gated behind connector status.
+// Do NOT request it during normal sign-in.
+// provider.addScope('https://www.googleapis.com/auth/keep');
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;

@@ -36,11 +36,13 @@ export function ContentLibrary() {
   const filteredContents = contents.filter(c => {
     if (filterBrand !== 'All' && c.brand !== filterBrand) return false;
     if (filterType !== 'All' && c.type !== filterType) return false;
-    if (filterStatus !== 'All' && c.status !== filterStatus) return false;
     if (search && !c.title.toLowerCase().includes(search.toLowerCase()) && !c.body.toLowerCase().includes(search.toLowerCase())) return false;
-    if (c.status === 'Archived') return false; // hide archived by default unless specifically selected? Let's just hide for now or add to filter options.
-    if (filterStatus === 'Archived' && c.status !== 'Archived') return false;
-    if (filterStatus !== 'Archived' && c.status === 'Archived') return false; 
+    // Archive filter: 'All' hides archived; 'Archived' shows only archived; other values filter normally
+    if (filterStatus === 'All') {
+      if (c.status === 'Archived') return false;
+    } else {
+      if (c.status !== filterStatus) return false;
+    }
     return true;
   });
 

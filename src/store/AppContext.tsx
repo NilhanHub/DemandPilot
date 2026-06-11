@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Keyword, ContentItem, Brand, Connector, BrandSettingsData } from '../types';
 import { auth, db } from '../lib/firebase';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 interface AppContextState {
   keywords: Keyword[];
@@ -86,6 +87,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       checkLoaded();
     }, (err) => {
       console.error(err);
+      toast.error('Failed to load keywords from Firestore.');
       checkLoaded();
     });
 
@@ -94,6 +96,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       checkLoaded();
     }, (err) => {
       console.error(err);
+      toast.error('Failed to load content from Firestore.');
       checkLoaded();
     });
 
@@ -107,6 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       checkLoaded();
     }, (err) => {
       console.error(err);
+      toast.error('Failed to load connectors from Firestore.');
       checkLoaded();
     });
 
@@ -120,6 +124,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       checkLoaded();
     }, (err) => {
       console.error(err);
+      toast.error('Failed to load brand settings from Firestore.');
       checkLoaded();
     });
 
@@ -134,39 +139,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addKeyword = async (kw: Omit<Keyword, 'id' | 'dateAdded'>) => {
     const user = auth.currentUser;
     if (!user) return;
-    const newKw: Keyword = { ...kw, id: crypto.randomUUID(), dateAdded: new Date().toISOString() };
-    await setDoc(doc(db, `users/${user.uid}/keywords`, newKw.id), newKw);
+    try {
+      const newKw: Keyword = { ...kw, id: crypto.randomUUID(), dateAdded: new Date().toISOString() };
+      await setDoc(doc(db, `users/${user.uid}/keywords`, newKw.id), newKw);
+    } catch (err) {
+      console.error('Failed to add keyword:', err);
+      toast.error('Failed to save keyword. Please try again.');
+    }
   };
 
   const updateKeyword = async (id: string, updates: Partial<Keyword>) => {
     const user = auth.currentUser;
     if (!user) return;
-    await updateDoc(doc(db, `users/${user.uid}/keywords`, id), updates);
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/keywords`, id), updates);
+    } catch (err) {
+      console.error('Failed to update keyword:', err);
+      toast.error('Failed to update keyword. Please try again.');
+    }
   };
 
   const addContent = async (content: Omit<ContentItem, 'id' | 'createdDate'>) => {
     const user = auth.currentUser;
     if (!user) return;
-    const newC: ContentItem = { ...content, id: crypto.randomUUID(), createdDate: new Date().toISOString() };
-    await setDoc(doc(db, `users/${user.uid}/contents`, newC.id), newC);
+    try {
+      const newC: ContentItem = { ...content, id: crypto.randomUUID(), createdDate: new Date().toISOString() };
+      await setDoc(doc(db, `users/${user.uid}/contents`, newC.id), newC);
+    } catch (err) {
+      console.error('Failed to add content:', err);
+      toast.error('Failed to save content. Please try again.');
+      throw err;
+    }
   };
 
   const updateContent = async (id: string, updates: Partial<ContentItem>) => {
     const user = auth.currentUser;
     if (!user) return;
-    await updateDoc(doc(db, `users/${user.uid}/contents`, id), updates);
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/contents`, id), updates);
+    } catch (err) {
+      console.error('Failed to update content:', err);
+      toast.error('Failed to update content. Please try again.');
+      throw err;
+    }
   };
 
   const updateConnector = async (id: string, updates: Partial<Connector>) => {
     const user = auth.currentUser;
     if (!user) return;
-    await updateDoc(doc(db, `users/${user.uid}/connectors`, id), updates);
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/connectors`, id), updates);
+    } catch (err) {
+      console.error('Failed to update connector:', err);
+      toast.error('Failed to update connector. Please try again.');
+    }
   };
 
   const updateBrandSettings = async (id: Brand, updates: Partial<BrandSettingsData>) => {
     const user = auth.currentUser;
     if (!user) return;
-    await updateDoc(doc(db, `users/${user.uid}/brandSettings`, id), updates);
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/brandSettings`, id), updates);
+    } catch (err) {
+      console.error('Failed to update brand settings:', err);
+      toast.error('Failed to save brand settings. Please try again.');
+    }
   };
 
   if (loading) {

@@ -1,59 +1,103 @@
 # DemandPilot
 
-DemandPilot is a premium, fully-functional, SaaS B2B demand generation and distribution platform. Built for founders, marketing teams, and content managers, DemandPilot unifies keyword research, content drafting, cross-platform distribution, and editorial approval pipelines into one elegant, intelligence-first interface.
+A keyword-to-content pipeline tool for managing multi-brand demand generation workflows. Built with Vite, React, TypeScript, Firebase Auth, and Firestore.
 
-This application is built as an offline-first, cloud-capable prototype natively rendering in the browser with secure backend persistence.
+## Current Features
 
-## Technologies Used
+- **Keyword Lab**: Manually add and organize keyword targets by brand, geography, audience, and intent. Stored in Firestore.
+- **Content Studio**: Generate content drafts from selected keywords. Supports multiple content types (LinkedIn Post, SEO Article, Ad Copy, Podcast Script, etc.).
+- **LinkedIn Publisher**: Write, preview, copy, and track LinkedIn posts with a manual publishing workflow. Paste the live LinkedIn URL to record publishing status.
+- **Content Library**: Browse, search, filter, and edit all saved content drafts and published posts. Archive and status management included.
+- **Calendar / Timeline**: Visual monthly calendar showing content planned or created dates with brand-color-coded chips.
+- **Brand Settings**: Configure brand voice, audience, CTAs, and forbidden content for ApexHRM, CV Pro, and 1BT.
+- **Integration Hub / Connectors**: View all current and planned integrations with honest status indicators (Live, Access Pending, Manual Export, Disconnected).
 
-*   **Vite + React + TypeScript**: A fast, modern frontend development environment guaranteeing strict type safety, fast native ES module compilation, and a component-heavy architecture.
-*   **Tailwind CSS**: A utility-first CSS framework for rapid UI development and maintaining the cohesive, premium SaaS design system.
-*   **Firebase Auth + Firestore**: Utilizes the Firebase Web API for secure Google Sign-In and real-time capable NoSQL database persistence.
-*   **date-fns**: Comprehensive toolset for fast client-side date manipulations in the Campaign Calendar.
-*   **Sonner**: Substantive, elegant toast notifications that avoid visual clutter.
-*   **Lucide-React**: High-quality SVG icon system perfectly tailored to premium SaaS interfaces.
+## Tech Stack
 
-## Features
+- **Frontend**: React 19 + TypeScript 5.8 + Vite 6
+- **Styling**: Tailwind CSS v4
+- **Authentication**: Firebase Auth (Google Sign-In)
+- **Database**: Cloud Firestore (per-user collections)
+- **UI Libraries**: Framer Motion, Lucide React, Sonner (toasts)
+- **Routing**: React Router DOM v7
 
-*   **Firebase Authentication System**: Built-in Google Single Sign-on integration, with user avatar and session state rendering directly into the sidebar.
-*   **Firestore Data Persistence**: All AppContext data logic utilizes fully operational Firestore collections: `keywords`, `contents`, and core internal structures. It syncs state across reloads cleanly.
-*   **Dashboard & Unified State**: Review metrics, recent content, and system summaries across an animated, premium overview screen.
-*   **Keyword Lab**: A research interface for cataloging targeted terms, mapping intent to geography, and moving straight to content creation natively.
-*   **Content Studio & AI Generation Mocking**: A distraction-free editing interface integrating AI "Drafting" pipelines seamlessly. Content created here is immediately available in the workflow cache.
-*   **Content Library & Inline Editing**: Comprehensive Data Table for reviewing all content pieces, featuring bulk operations, contextual search, exact status filtering, and inline rapid editing overlays.
-*   **Manual LinkedIn Workflow**: Built around an authentication-safe "Manual Action" flow. Users draft LinkedIn posts in the system, copy them to the clipboard, manually post to the native LinkedIn network, and then attach the live URL in the platform to synchronize the record's Live state permanently.
-*   **Campaign Calendar**: A unified Month/Week grid view parsing out published content natively. Uses visual brand-coded distribution chips with deep linking into the Content Library modifier.
-*   **Integration Hub (Connectors)**: Provides a system of record for connecting Workspace capabilities safely across Google Drive, Workspace API, Google Trends, Analytics, Search Console, and manual pipelines without relying on mock data logic.
-*   **Settings System**: Detailed modular management of brands (`ApexHRM`, `CV Pro`, `1BT`) dictating stylistic rules and tonalities for generated outputs.
+## Architecture
 
-## How to Run Locally
+- Firebase Auth handles user identity via Google OAuth
+- All user data (keywords, content, connectors, brand settings) is stored in Firestore under `users/{uid}/`
+- Real-time Firestore listeners keep the UI synced
+- No server-side processing — fully client-side SPA
 
-If you are exporting this project from AI Studio Build to your device:
+## Running Locally
 
-1.  **Install Node.js & npm**
-2.  **Pull Repository**: Unzip or clone the repository locally to your environment.
-3.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
-4.  **Configure Environment Variables**:
-    Copy the `.env.example` file and rename it to `.env`. Ensure your `firebase-applet-config.json` parameters are properly injected representing your target database environment.
-5.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
-6.  The platform will typically launch on `localhost:3000` via Vite.
+```bash
+npm ci
+npm run dev
+```
 
-## What is Real Now
+The dev server starts at `http://localhost:3000`.
 
-*   **Firebase Auth**: The entire Google Login system is real and authenticates directly to Firebase security servers.
-*   **Data Persistence**: If Firebase is configured properly, any modifications in the application will accurately save, modify, index, and load off a live Firestore DB immediately avoiding local-storage wiping. 
-*   **Application Logic**: Complete front-to-back cross-page state flow routing (e.g. Navigating from Calendar Chip -> Inline Content Editor overlay).
-*   **Manual External Linking Validation**: Validating the exact format of external LinkedIn links mapped uniquely to Content instances.
+## Building
 
-## What is Planned Later
+```bash
+npm run build
+```
 
-*   **Live Connectors API Hooking**: Shifting Connected Workspace/External applications (Gmail, Workspace, GSC, Meta/LI Ads APIs) from "Pending Setup" manually to directly hooked bi-directional OAuth states.
-*   **Agentic Orchestration AI Integration**: Building prompt-chaining flows into the drafting system utilizing `gemini-api` calls behind the Content Studio interface. 
-*   **Rich Analytics Hooking**: Rendering GSC query-level tables inside the Dashboard dynamically.
-*   **Webhooks Publishing Pipeline**: Enabling automatic push capability straight to WordPress CMS endpoints or automated LinkedIn marketing deployments.
+Production output goes to `dist/`.
+
+## Linting / Type Checking
+
+```bash
+npm run lint
+```
+
+Runs `tsc --noEmit` to type-check without emitting files.
+
+## Testing
+
+```bash
+npm test
+```
+
+Runs Vitest unit tests.
+
+## Known Limitations
+
+- **LinkedIn publishing is manual**: There is no LinkedIn API integration. Users copy post content and paste it into LinkedIn directly.
+- **Google Keep export is gated**: The Keep API requires Workspace Admin verification. The connector is visible but not active.
+- **Google Workspace connectors are pending**: Drive, Sheets, Docs, Gmail, Calendar connectors are shown as "Access Pending" and do not function yet.
+- **No AI generation backend**: Content generation uses template-based drafts from user-provided keywords. Real AI generation (Gemini) is planned but not yet integrated.
+- **No analytics**: Search Console, GA4, and Google Ads integrations are planned but not connected.
+- **Single-chunk bundle**: The production build outputs a single large JS bundle. Code splitting is recommended for production scale.
+
+## Planned Features
+
+- Gemini AI-powered content generation
+- Google Workspace integration (Drive, Sheets, Docs)
+- LinkedIn API posting (when approved)
+- Search Console / GA4 analytics import
+- Multi-user team workflows
+- Content scheduling and automated publishing
+
+## Project Structure
+
+```
+├── src/
+│   ├── App.tsx              # Root component with auth + routing
+│   ├── main.tsx             # Entry point
+│   ├── index.css            # Global styles (Tailwind)
+│   ├── components/          # Shared UI components
+│   │   ├── Layout.tsx       # App shell with sidebar
+│   │   ├── Sidebar.tsx      # Navigation sidebar
+│   │   └── ui/              # Reusable UI primitives
+│   ├── lib/                 # Utilities
+│   │   ├── firebase.ts      # Firebase init + auth
+│   │   ├── keep.ts          # Google Keep API (gated)
+│   │   └── utils.ts         # Tailwind merge helper
+│   ├── pages/               # Route pages
+│   ├── store/               # React context (AppContext)
+│   └── types/               # TypeScript type definitions
+├── firebase-applet-config.json
+├── firestore.rules
+└── package.json
+```
