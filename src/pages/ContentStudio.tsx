@@ -7,9 +7,10 @@ import { Input, Label } from '../components/ui/InputLabel';
 import { Select, Textarea } from '../components/ui/SelectTextarea';
 import { Badge } from '../components/ui/Badge';
 import { toast } from 'sonner';
+import { generateContent, formatCopiedContent, normalizeHashtags } from '../lib/aiContentGenerator';
 
 export function ContentStudio() {
-  const { keywords, addContent, connectors } = useAppContext();
+  const { keywords, addContent, connectors, brandSettings } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -44,15 +45,48 @@ export function ContentStudio() {
   const wordCount = (hook + ' ' + body).trim().split(/\s+/).filter(w => w.length > 0).length;
   const charCount = (hook + ' ' + body).length;
 
-  const handleGenerate = () => {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
     const kw = keywords.find(k => k.id === keywordId)?.text || 'General Topic';
-    const draftTitle = `Draft: ${kw.substring(0,20)}...`;
+    const brandData = brandSettings.find(b => b.id === brand);
     
-    setTitle(draftTitle);
-    setHook(`Does your business struggle with "${kw}"?`);
-    setBody(`This is an AI draft from user-provided keyword: "${kw}".\n\n[Body paragraph 1]\n[Body paragraph 2]\n\n${cta}`);
-    setHashtags(`#${brand.replace(/\s+/g,'')} #${kw.replace(/\s+/g,'')}`);
-    toast.success('Draft generated based on requirements.');
+    try {
+      const generated = await generateContent({
+        keyword: kw,
+        brand,
+        brandVoice: brandData?.voice || '',
+        geography,
+        audience: audience || brandData?.audience || '',
+        contentType,
+        tone,
+        cta,
+        length
+      });
+
+      setTitle(generated.title);
+      setHook(generated.hook);
+      setBody(generated.body);
+      setCta(generated.cta);
+      setHashtags(normalizeHashtags(generated.hashtags));
+      setNotes(generated.notes);
+      toast.success('AI draft generated successfully.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'AI generation failed');
+      
+      // Fallback: keep existing manual draft editor working by pre-filling basics
+      if (err.message.includes('not configured')) {
+         setTitle(`Draft: ${kw.substring(0,20)}...`);
+         setHook(`Does your business struggle with "${kw}"?`);
+         setBody(`[Manual draft space]\n\n${cta}`);
+         setHashtags(normalizeHashtags([brand.replace(/\s+/g,''), kw.replace(/\s+/g,'')]));
+         toast.info('Using manual editor instead.');
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSaveDraft = async () => {
@@ -68,11 +102,15 @@ export function ContentStudio() {
       tone,
       cta,
       length,
-      body: `[Hook]\n${hook}\n\n[Body]\n${body}`,
+      hook,
+      body,
       hashtags,
       notes,
       platform: contentType.includes('LinkedIn') ? 'LinkedIn' : 'Unknown',
       status: 'Draft',
+      geography,
+      audience,
+      sourceMode: 'user_keyword_only'
     });
     toast.success('Draft saved successfully to Firestore!');
   };
@@ -90,11 +128,15 @@ export function ContentStudio() {
       tone,
       cta,
       length,
-      body: `[Hook]\n${hook}\n\n[Body]\n${body}`,
+      hook,
+      body,
       hashtags,
       notes,
       platform: contentType.includes('LinkedIn') ? 'LinkedIn' : 'Unknown',
       status: 'Needs Review',
+      geography,
+      audience,
+      sourceMode: 'user_keyword_only'
     });
     toast.success('Draft saved and sent to Review!');
     navigate('/library');
@@ -102,7 +144,8 @@ export function ContentStudio() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(`${title}\n\n${hook}\n\n${body}\n\n${hashtags}`);
+      const formatted = formatCopiedContent(title, hook, body, cta, hashtags);
+      await navigator.clipboard.writeText(formatted);
       toast.success('Content copied to clipboard');
     } catch (err) {
       console.error('Clipboard write failed:', err);
@@ -190,10 +233,10 @@ export function ContentStudio() {
                 </div>
               </div>
                <div className="pt-4 border-t border-slate-100">
-                 <Button onClick={handleGenerate} className="w-full bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                   Generate Draft
+                 <Button onClick={handleGenerate} disabled={isGenerating} className="w-full bg-indigo-600 hover:bg-indigo-700 transition-colors">
+                   {isGenerating ? 'Generating...' : 'Generate Draft'}
                  </Button>
-                 <p className="text-xs font-medium text-slate-400 text-center mt-3 tracking-tight">AI draft from user-provided keyword.</p>
+                 <p className="text-xs font-medium text-slate-400 text-center mt-3 tracking-tight">AI draft — based on user-provided keyword only.</p>
                </div>
             </CardContent>
           </Card>
@@ -204,7 +247,7 @@ export function ContentStudio() {
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 bg-slate-50 rounded-t-xl pb-4 gap-4">
               <div className="flex items-center gap-3">
                 <CardTitle className="text-lg">Draft Editor</CardTitle>
-                {title && <Badge className="bg-indigo-100 text-indigo-700">Draft</Badge>}
+                {title && <Badge className="bg-indigo-100 text-indigo-700">AI Draft — User Keyword Only</Badge>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                  <div className="text-xs text-slate-500 font-medium mr-2 font-mono">

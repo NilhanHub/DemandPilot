@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { normalizeHashtags, formatCopiedContent, parseAIResponse } from '../lib/aiContentGenerator';
 
 // ============================================================
 // Status Normalization Tests
@@ -144,5 +145,55 @@ describe('Archive filter logic', () => {
     const result = filterContents(mockContents, 'Draft');
     expect(result.length).toBe(1);
     expect(result[0].status).toBe('Draft');
+  });
+});
+
+// ============================================================
+// AI Content Generator Helpers Tests
+// ============================================================
+
+describe('AI Content Generator Helpers', () => {
+  describe('normalizeHashtags', () => {
+    it('should format an array of hashtags correctly', () => {
+      expect(normalizeHashtags(['hr', '#recruitment'])).toBe('#hr #recruitment');
+    });
+
+    it('should format a string of hashtags correctly', () => {
+      expect(normalizeHashtags('hr #recruitment hiring')).toBe('#hr #recruitment #hiring');
+    });
+
+    it('should return empty string for empty input', () => {
+      expect(normalizeHashtags('')).toBe('');
+      expect(normalizeHashtags([])).toBe('');
+    });
+  });
+
+  describe('formatCopiedContent', () => {
+    it('should format the copied text beautifully', () => {
+      const formatted = formatCopiedContent('Title 1', 'Hook 1', 'Body 1', 'CTA 1', '#tag1');
+      expect(formatted).toContain('Title: Title 1');
+      expect(formatted).toContain('Hook: Hook 1');
+      expect(formatted).toContain('Body: Body 1');
+      expect(formatted).toContain('CTA: CTA 1');
+      expect(formatted).toContain('Hashtags: #tag1');
+    });
+  });
+
+  describe('parseAIResponse', () => {
+    it('should parse valid JSON', () => {
+      const validJSON = JSON.stringify({ title: 'Test Title' });
+      const parsed = parseAIResponse(validJSON);
+      expect(parsed.title).toBe('Test Title');
+    });
+
+    it('should repair markdown JSON blocks', () => {
+      const markdownJSON = "```json\n{ \"title\": \"Repaired Title\" }\n```";
+      const parsed = parseAIResponse(markdownJSON);
+      expect(parsed.title).toBe('Repaired Title');
+    });
+
+    it('should throw error on completely invalid JSON', () => {
+      expect(() => parseAIResponse('not a json object')).toThrow('Invalid JSON returned from AI');
+    });
   });
 });

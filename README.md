@@ -5,7 +5,7 @@ A keyword-to-content pipeline tool for managing multi-brand demand generation wo
 ## Current Features
 
 - **Keyword Lab**: Manually add and organize keyword targets by brand, geography, audience, and intent. Stored in Firestore.
-- **Content Studio**: Generate content drafts from selected keywords. Supports multiple content types (LinkedIn Post, SEO Article, Ad Copy, Podcast Script, etc.).
+- **Content Studio**: Features real AI-powered content generation (v1) via Gemini, strictly enforcing brand voice and constraints. *Note: Currently, AI logic is unconfigured, so a manual draft fallback is provided.* Supports multiple content types (LinkedIn Post, SEO Article, Ad Copy, Podcast Script, etc.).
 - **LinkedIn Publisher**: Write, preview, copy, and track LinkedIn posts with a manual publishing workflow. Paste the live LinkedIn URL to record publishing status.
 - **Content Library**: Browse, search, filter, and edit all saved content drafts and published posts. Archive and status management included.
 - **Calendar / Timeline**: Visual monthly calendar showing content planned or created dates with brand-color-coded chips.
@@ -66,13 +66,14 @@ Runs Vitest unit tests.
 - **LinkedIn publishing is manual**: There is no LinkedIn API integration. Users copy post content and paste it into LinkedIn directly.
 - **Google Keep export is gated**: The Keep API requires Workspace Admin verification. The connector is visible but not active.
 - **Google Workspace connectors are pending**: Drive, Sheets, Docs, Gmail, Calendar connectors are shown as "Access Pending" and do not function yet.
-- **No AI generation backend**: Content generation uses template-based drafts from user-provided keywords. Real AI generation (Gemini) is planned but not yet integrated.
+- **Firebase AI Logic is NOT configured**: The `aiContentGenerator` module is integrated using `@google/genai`, but no API key or Firebase backend is safely provided yet to avoid exposing keys in the client bundle. The UI safely catches this and provides a manual fallback.
+- **AI constraints**: When active, AI generation uses *only* user-provided keywords. It does not use live trend data, search volumes, or live LinkedIn analytics.
 - **No analytics**: Search Console, GA4, and Google Ads integrations are planned but not connected.
 - **Single-chunk bundle**: The production build outputs a single large JS bundle. Code splitting is recommended for production scale.
 
 ## Planned Features
 
-- Gemini AI-powered content generation
+- Secure backend setup for Gemini AI generation
 - Google Workspace integration (Drive, Sheets, Docs)
 - LinkedIn API posting (when approved)
 - Search Console / GA4 analytics import

@@ -27,14 +27,20 @@ export interface ContentItem {
   tone: string;
   cta: string;
   length: string;
+  hook?: string;
   body: string;
   hashtags: string;
   notes: string;
   status: ContentStatus;
   createdDate: string;
+  updatedAt?: string;
   platform: string;
   manualUrl?: string;
   plannedDate?: string;
+  geography?: string;
+  audience?: string;
+  sourceMode?: "user_keyword_only";
+  aiModel?: string;
 }
 
 export interface Connector {
