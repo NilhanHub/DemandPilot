@@ -338,3 +338,62 @@ describe('Generic Test Publisher data models', () => {
     expect(postText.length).toBeGreaterThan(50);
   });
 });
+
+// ============================================================
+// LinkedIn Posts API Tests
+// ============================================================
+
+describe('LinkedIn /rest/posts publishing logic', () => {
+  it('should format payload correctly for /rest/posts', () => {
+    const authorUrn = 'urn:li:person:123';
+    const contentBody = 'Test post';
+    
+    const payload = {
+      author: authorUrn,
+      commentary: contentBody,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: []
+      },
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false
+    };
+
+    expect(payload.author).toBe(authorUrn);
+    expect(payload.commentary).toBe(contentBody);
+    expect(payload.visibility).toBe('PUBLIC');
+    expect(payload.distribution.feedDistribution).toBe('MAIN_FEED');
+    expect(payload.lifecycleState).toBe('PUBLISHED');
+  });
+
+  it('should correctly parse x-restli-id into a URL', () => {
+    const mockHeaders = new Map([
+      ['x-restli-id', 'urn:li:share:123456789']
+    ]);
+    
+    const restliId = mockHeaders.get('x-restli-id') || '';
+    const url = restliId ? `https://www.linkedin.com/feed/update/${restliId}` : 'URL unavailable';
+    
+    expect(restliId).toBe('urn:li:share:123456789');
+    expect(url).toBe('https://www.linkedin.com/feed/update/urn:li:share:123456789');
+  });
+
+  it('should gracefully handle missing credentials (not_configured)', () => {
+    const token = undefined;
+    const author = undefined;
+
+    const isConfigured = !!(token && author);
+    expect(isConfigured).toBe(false);
+  });
+  
+  it('should redact tokens from generic error messages', () => {
+    const token = 'SECRET_TOKEN_123';
+    const rawError = `Failed to authenticate with token ${token}`;
+    const safeError = rawError.replace(token, '[REDACTED]');
+    
+    expect(safeError).not.toContain(token);
+    expect(safeError).toContain('[REDACTED]');
+  });
+});

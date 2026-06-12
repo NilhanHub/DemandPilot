@@ -247,23 +247,25 @@ app.post('/api/publish/linkedin', async (req, res) => {
 
     const payload = {
       author: authorUrn,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: { text: contentBody },
-          shareMediaCategory: 'NONE'
-        }
+      commentary: contentBody,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: []
       },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-      }
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false
     };
 
-    const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    const apiVersion = process.env.LINKEDIN_API_VERSION || '202505';
+
+    const response = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'LinkedIn-Version': apiVersion,
         'X-Restli-Protocol-Version': '2.0.0'
       },
       body: JSON.stringify(payload)
@@ -278,13 +280,15 @@ app.post('/api/publish/linkedin', async (req, res) => {
       });
     }
 
-    const data = await response.json();
-    
+    const restliId = response.headers.get('x-restli-id') || '';
+    // The response body might be empty for a successful 201 Created on the rest API.
+    const url = restliId ? `https://www.linkedin.com/feed/update/${restliId}` : 'URL unavailable';
+
     return res.status(200).json({
       destination: 'linkedin',
       status: 'published',
-      externalId: data.id,
-      externalUrl: `https://www.linkedin.com/feed/update/${data.id}`,
+      externalId: restliId,
+      externalUrl: url,
       publishedAt: new Date().toISOString()
     });
 
