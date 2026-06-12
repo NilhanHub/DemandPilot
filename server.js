@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -12,6 +13,204 @@ app.use(express.json());
 
 // Helper to determine base URL safely
 const getReqBaseUrl = (req) => `${req.protocol}://${req.get('host')}`;
+
+const aiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+const extractionResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    extractedKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+    highPriorityKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+    keywordGroups: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          groupName: { type: Type.STRING },
+          keywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+          intent: { type: Type.STRING }
+        },
+        propertyOrdering: ['groupName', 'keywords', 'intent']
+      }
+    },
+    recommendedPrimaryKeyword: { type: Type.STRING },
+    recommendedSecondaryKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+    notes: { type: Type.STRING }
+  },
+  propertyOrdering: [
+    'extractedKeywords',
+    'highPriorityKeywords',
+    'keywordGroups',
+    'recommendedPrimaryKeyword',
+    'recommendedSecondaryKeywords',
+    'notes'
+  ]
+};
+
+const campaignContentResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING },
+    hook: { type: Type.STRING },
+    body: { type: Type.STRING },
+    cta: { type: Type.STRING },
+    hashtags: { type: Type.ARRAY, items: { type: Type.STRING } },
+    selectedKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+    keywordStrategy: { type: Type.STRING },
+    riskFlags: { type: Type.ARRAY, items: { type: Type.STRING } },
+    sourceMode: { type: Type.STRING }
+  },
+  propertyOrdering: [
+    'title',
+    'hook',
+    'body',
+    'cta',
+    'hashtags',
+    'selectedKeywords',
+    'keywordStrategy',
+    'riskFlags',
+    'sourceMode'
+  ]
+};
+
+const getAiClient = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+};
+
+const parseStructuredJson = (text, context) => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const repaired = String(text || '').replace(/```json/g, '').replace(/```/g, '').trim();
+    try {
+      return JSON.parse(repaired);
+    } catch {
+      throw new Error(`Invalid JSON returned from ${context}`);
+    }
+  }
+};
+
+const getResponseText = (response) => {
+  if (typeof response.text === 'function') return response.text();
+  return response.text;
+};
+
+const notConfigured = (res, errorMessage) => res.status(200).json({
+  status: 'not_configured',
+  errorMessage
+});
+
+// ==========================================
+// SERVER-SIDE AI GENERATION
+// ==========================================
+app.post('/api/ai/extract-keywords', async (req, res) => {
+  const { source, type } = req.body;
+
+  if (type === 'image') {
+    return res.status(200).json({
+      status: 'failed',
+      errorMessage: 'Screenshot parsing is not configured yet. Please paste keywords manually as a fallback.'
+    });
+  }
+
+  if (!source || typeof source !== 'string' || source.trim().length === 0) {
+    return res.status(400).json({
+      status: 'failed',
+      errorMessage: 'Keyword source text is required.'
+    });
+  }
+
+  const ai = getAiClient();
+  if (!ai) {
+    return notConfigured(res, 'AI generation is not configured yet. Missing GEMINI_API_KEY on the server.');
+  }
+
+  try {
+    const prompt = [
+      'Extract and prioritize demand generation keywords from the user-provided source text.',
+      'Use only the supplied source text. Do not invent search volume, analytics, or live trend data.',
+      'Group related keywords and infer intent only from the wording.',
+      '',
+      `Source text:\n${source.trim()}`
+    ].join('\n');
+
+    const response = await ai.models.generateContent({
+      model: aiModel,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: extractionResponseSchema
+      }
+    });
+
+    return res.status(200).json({
+      status: 'ready',
+      result: parseStructuredJson(getResponseText(response), 'AI keyword extraction')
+    });
+  } catch (error) {
+    return res.status(200).json({
+      status: 'failed',
+      errorMessage: `AI keyword extraction failed: ${error.message}`
+    });
+  }
+});
+
+app.post('/api/ai/generate-campaign-content', async (req, res) => {
+  const { params } = req.body;
+
+  if (!params || !Array.isArray(params.extractedKeywords) || params.extractedKeywords.length === 0) {
+    return res.status(400).json({
+      status: 'failed',
+      errorMessage: 'At least one extracted keyword is required.'
+    });
+  }
+
+  const ai = getAiClient();
+  if (!ai) {
+    return notConfigured(res, 'AI generation is not configured yet. Missing GEMINI_API_KEY on the server.');
+  }
+
+  try {
+    const prompt = [
+      'Create one structured campaign content draft for DemandPilot.',
+      'Use only the supplied keywords, brand context, audience, and instruction.',
+      'Do not claim live analytics, search volume, rankings, guaranteed jobs, or unsupported product facts.',
+      'Return concise, practical copy that still requires human approval before publishing.',
+      '',
+      `Brand: ${params.brand}`,
+      `Brand voice: ${params.brandVoice || 'Not provided'}`,
+      `Output type: ${params.outputType}`,
+      `Geography: ${params.geography || 'Not provided'}`,
+      `Audience: ${params.audience || 'Not provided'}`,
+      `Tone: ${params.tone || 'Professional'}`,
+      `Length: ${params.length || 'Medium'}`,
+      `CTA: ${params.cta || 'Not provided'}`,
+      `Instruction: ${params.instruction || 'No extra instruction provided'}`,
+      `Keywords: ${params.extractedKeywords.join(', ')}`
+    ].join('\n');
+
+    const response = await ai.models.generateContent({
+      model: aiModel,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: campaignContentResponseSchema
+      }
+    });
+
+    return res.status(200).json({
+      status: 'ready',
+      result: parseStructuredJson(getResponseText(response), 'AI campaign content generation')
+    });
+  } catch (error) {
+    return res.status(200).json({
+      status: 'failed',
+      errorMessage: `AI campaign content generation failed: ${error.message}`
+    });
+  }
+});
 
 // ==========================================
 // LINKEDIN PUBLISHING

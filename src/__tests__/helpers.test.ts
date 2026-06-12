@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { normalizeHashtags, formatCopiedContent, parseExtractionResponse, parseCampaignResponse } from '../lib/aiContentGenerator';
+import { describe, it, expect, vi } from 'vitest';
+import {
+  extractKeywordsFromSource,
+  generateCampaignContent,
+  normalizeHashtags,
+  formatCopiedContent,
+  parseExtractionResponse,
+  parseCampaignResponse
+} from '../lib/aiContentGenerator';
 
 // ============================================================
 // Status Normalization Tests
@@ -212,6 +219,94 @@ describe('AI Content Generator Helpers', () => {
 
     it('should throw error on completely invalid JSON', () => {
       expect(() => parseExtractionResponse('not a json object')).toThrow('Invalid JSON returned from AI');
+    });
+  });
+
+  describe('server-backed AI requests', () => {
+    it('should request keyword extraction from the server API without frontend API keys', async () => {
+      const fetchMock = vi.fn(async (_url: string, _options: RequestInit) => ({
+        ok: true,
+        json: async () => ({
+          status: 'ready',
+          result: {
+            extractedKeywords: ['hr software'],
+            highPriorityKeywords: ['hr software'],
+            keywordGroups: [{ groupName: 'HR', keywords: ['hr software'], intent: 'commercial' }],
+            recommendedPrimaryKeyword: 'hr software',
+            recommendedSecondaryKeywords: [],
+            notes: 'Server generated'
+          }
+        })
+      }));
+
+      const result = await (extractKeywordsFromSource as any)('hr software', 'text', fetchMock);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ai/extract-keywords',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: 'hr software', type: 'text' })
+        })
+      );
+      expect(result.recommendedPrimaryKeyword).toBe('hr software');
+    });
+
+    it('should request campaign content generation from the server API', async () => {
+      const params = {
+        instruction: 'Write a practical post',
+        brand: 'CV Pro',
+        brandVoice: 'Direct and helpful',
+        outputType: 'LinkedIn Post',
+        extractedKeywords: ['cv builder'],
+        geography: 'Sri Lanka',
+        audience: 'Job seekers',
+        tone: 'Professional',
+        cta: 'Build your CV',
+        length: 'Medium'
+      };
+      const fetchMock = vi.fn(async (_url: string, _options: RequestInit) => ({
+        ok: true,
+        json: async () => ({
+          status: 'ready',
+          result: {
+            title: 'Better CVs',
+            hook: 'Your CV should work harder.',
+            body: 'Use CV Pro to improve your profile.',
+            cta: 'Build your CV',
+            hashtags: ['CVPro'],
+            selectedKeywords: ['cv builder'],
+            keywordStrategy: 'Lead with the primary keyword.',
+            riskFlags: [],
+            sourceMode: 'manual_keywords'
+          }
+        })
+      }));
+
+      const result = await (generateCampaignContent as any)(params, undefined, fetchMock);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ai/generate-campaign-content',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ params, imageSource: undefined })
+        })
+      );
+      expect(result.title).toBe('Better CVs');
+    });
+
+    it('should surface server not_configured errors instead of faking AI output', async () => {
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          status: 'not_configured',
+          errorMessage: 'AI generation is not configured yet. Missing GEMINI_API_KEY on the server.'
+        })
+      }));
+
+      await expect((extractKeywordsFromSource as any)('cv builder', 'text', fetchMock))
+        .rejects.toThrow('Missing GEMINI_API_KEY on the server');
     });
   });
 });

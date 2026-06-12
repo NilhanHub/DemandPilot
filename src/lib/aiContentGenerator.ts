@@ -1,5 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
 export interface ExtractionResponse {
   extractedKeywords: string[];
   highPriorityKeywords: string[];
@@ -39,27 +37,55 @@ export interface CampaignContentResponse {
   sourceMode: "keyword_screenshot" | "keyword_csv" | "manual_keywords";
 }
 
-export async function extractKeywordsFromSource(source: string, type: 'image' | 'text'): Promise<ExtractionResponse> {
-  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    if (type === 'image') {
-      throw new Error('Screenshot parsing not configured yet. Please paste keywords manually as a fallback.');
-    }
-    throw new Error('AI generation is not configured yet. Missing VITE_GEMINI_API_KEY.');
-  }
-
-  // Not implemented fully yet because we enforce throwing the error for now as per instructions.
-  throw new Error('Not implemented: AI key found but implementation pending');
+interface AiApiResponse<T> {
+  status: 'ready' | 'not_configured' | 'failed';
+  result?: T;
+  errorMessage?: string;
 }
 
-export async function generateCampaignContent(params: CampaignContentParams, imageSource?: string): Promise<CampaignContentResponse> {
-  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('AI generation is not configured yet. Missing VITE_GEMINI_API_KEY.');
+type FetchLike = (input: string, init?: RequestInit) => Promise<{
+  ok: boolean;
+  status?: number;
+  json: () => Promise<AiApiResponse<unknown>>;
+}>;
+
+async function postAiRequest<T>(path: string, body: unknown, fetchImpl: FetchLike = fetch): Promise<T> {
+  const response = await fetchImpl(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI server request failed with HTTP ${response.status || 'error'}.`);
   }
 
-  // Not implemented fully yet because we enforce throwing the error for now as per instructions.
-  throw new Error('Not implemented: AI key found but implementation pending');
+  const data = await response.json() as AiApiResponse<T>;
+  if (data.status !== 'ready' || !data.result) {
+    throw new Error(data.errorMessage || 'AI generation failed on the server.');
+  }
+
+  return data.result;
+}
+
+export async function extractKeywordsFromSource(
+  source: string,
+  type: 'image' | 'text',
+  fetchImpl?: FetchLike
+): Promise<ExtractionResponse> {
+  return postAiRequest<ExtractionResponse>('/api/ai/extract-keywords', { source, type }, fetchImpl);
+}
+
+export async function generateCampaignContent(
+  params: CampaignContentParams,
+  imageSource?: string,
+  fetchImpl?: FetchLike
+): Promise<CampaignContentResponse> {
+  return postAiRequest<CampaignContentResponse>(
+    '/api/ai/generate-campaign-content',
+    { params, imageSource },
+    fetchImpl
+  );
 }
 
 export function parseExtractionResponse(text: string): ExtractionResponse {
