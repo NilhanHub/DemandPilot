@@ -8,7 +8,7 @@ const navItems = [
   { name: 'Keyword Lab', href: '/keywords', icon: Layers },
   { name: 'Campaign Builder', href: '/studio', icon: PenTool },
   { name: 'Test Publisher', href: '/test-publisher', icon: PenTool },
-  { name: 'LinkedIn Post', href: '/linkedin', icon: Share2 },
+  { name: 'LinkedIn Post', href: '/publish', icon: Share2 },
   { name: 'Content Library', href: '/library', icon: FileText },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Brand Settings', href: '/settings', icon: Settings },

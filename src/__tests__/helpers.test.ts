@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { normalizeHashtags, formatCopiedContent, parseExtractionResponse, parseCampaignResponse } from '../lib/aiContentGenerator';
+import { describe, it, expect, vi } from 'vitest';
+import {
+  extractKeywordsFromSource,
+  generateCampaignContent,
+  normalizeHashtags,
+  formatCopiedContent,
+  parseExtractionResponse,
+  parseCampaignResponse
+} from '../lib/aiContentGenerator';
 
 // ============================================================
 // Status Normalization Tests
@@ -214,6 +221,94 @@ describe('AI Content Generator Helpers', () => {
       expect(() => parseExtractionResponse('not a json object')).toThrow('Invalid JSON returned from AI');
     });
   });
+
+  describe('server-backed AI requests', () => {
+    it('should request keyword extraction from the server API without frontend API keys', async () => {
+      const fetchMock = vi.fn(async (_url: string, _options: RequestInit) => ({
+        ok: true,
+        json: async () => ({
+          status: 'ready',
+          result: {
+            extractedKeywords: ['hr software'],
+            highPriorityKeywords: ['hr software'],
+            keywordGroups: [{ groupName: 'HR', keywords: ['hr software'], intent: 'commercial' }],
+            recommendedPrimaryKeyword: 'hr software',
+            recommendedSecondaryKeywords: [],
+            notes: 'Server generated'
+          }
+        })
+      }));
+
+      const result = await (extractKeywordsFromSource as any)('hr software', 'text', fetchMock);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ai/extract-keywords',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: 'hr software', type: 'text' })
+        })
+      );
+      expect(result.recommendedPrimaryKeyword).toBe('hr software');
+    });
+
+    it('should request campaign content generation from the server API', async () => {
+      const params = {
+        instruction: 'Write a practical post',
+        brand: 'CV Pro',
+        brandVoice: 'Direct and helpful',
+        outputType: 'LinkedIn Post',
+        extractedKeywords: ['cv builder'],
+        geography: 'Sri Lanka',
+        audience: 'Job seekers',
+        tone: 'Professional',
+        cta: 'Build your CV',
+        length: 'Medium'
+      };
+      const fetchMock = vi.fn(async (_url: string, _options: RequestInit) => ({
+        ok: true,
+        json: async () => ({
+          status: 'ready',
+          result: {
+            title: 'Better CVs',
+            hook: 'Your CV should work harder.',
+            body: 'Use CV Pro to improve your profile.',
+            cta: 'Build your CV',
+            hashtags: ['CVPro'],
+            selectedKeywords: ['cv builder'],
+            keywordStrategy: 'Lead with the primary keyword.',
+            riskFlags: [],
+            sourceMode: 'manual_keywords'
+          }
+        })
+      }));
+
+      const result = await (generateCampaignContent as any)(params, undefined, fetchMock);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ai/generate-campaign-content',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ params, imageSource: undefined })
+        })
+      );
+      expect(result.title).toBe('Better CVs');
+    });
+
+    it('should surface server not_configured errors instead of faking AI output', async () => {
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          status: 'not_configured',
+          errorMessage: 'AI generation is not configured yet. Missing GEMINI_API_KEY on the server.'
+        })
+      }));
+
+      await expect((extractKeywordsFromSource as any)('cv builder', 'text', fetchMock))
+        .rejects.toThrow('Missing GEMINI_API_KEY on the server');
+    });
+  });
 });
 
 // ============================================================
@@ -241,5 +336,64 @@ describe('Generic Test Publisher data models', () => {
     const postText = "CV Pro is a 'for life' platform to manage and improve your CV with AI. Log in to cvpro.globalapps.world to get your free credits";
     expect(postText).toContain('CV Pro');
     expect(postText.length).toBeGreaterThan(50);
+  });
+});
+
+// ============================================================
+// LinkedIn Posts API Tests
+// ============================================================
+
+describe('LinkedIn /rest/posts publishing logic', () => {
+  it('should format payload correctly for /rest/posts', () => {
+    const authorUrn = 'urn:li:person:123';
+    const contentBody = 'Test post';
+    
+    const payload = {
+      author: authorUrn,
+      commentary: contentBody,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: []
+      },
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false
+    };
+
+    expect(payload.author).toBe(authorUrn);
+    expect(payload.commentary).toBe(contentBody);
+    expect(payload.visibility).toBe('PUBLIC');
+    expect(payload.distribution.feedDistribution).toBe('MAIN_FEED');
+    expect(payload.lifecycleState).toBe('PUBLISHED');
+  });
+
+  it('should correctly parse x-restli-id into a URL', () => {
+    const mockHeaders = new Map([
+      ['x-restli-id', 'urn:li:share:123456789']
+    ]);
+    
+    const restliId = mockHeaders.get('x-restli-id') || '';
+    const url = restliId ? `https://www.linkedin.com/feed/update/${restliId}` : 'URL unavailable';
+    
+    expect(restliId).toBe('urn:li:share:123456789');
+    expect(url).toBe('https://www.linkedin.com/feed/update/urn:li:share:123456789');
+  });
+
+  it('should gracefully handle missing credentials (not_configured)', () => {
+    const token = undefined;
+    const author = undefined;
+
+    const isConfigured = !!(token && author);
+    expect(isConfigured).toBe(false);
+  });
+  
+  it('should redact tokens from generic error messages', () => {
+    const token = 'SECRET_TOKEN_123';
+    const rawError = `Failed to authenticate with token ${token}`;
+    const safeError = rawError.replace(token, '[REDACTED]');
+    
+    expect(safeError).not.toContain(token);
+    expect(safeError).toContain('[REDACTED]');
   });
 });

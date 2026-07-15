@@ -65,13 +65,14 @@ export function ContentStudio() {
     
     try {
       // Step 1: Extraction
-      // In this version, we pass the text or dummy image string to trigger the specific safety errors requested.
       let extractionSource = keywordText;
       let extractionType: 'text' | 'image' = 'text';
       
       if (keywordSourceMode === 'screenshot' && keywordFile) {
         extractionType = 'image';
         extractionSource = 'dummy_image_data';
+      } else if (keywordSourceMode === 'csv' && keywordFile) {
+        extractionSource = await keywordFile.text();
       }
 
       const extraction = await extractKeywordsFromSource(extractionSource, extractionType);
