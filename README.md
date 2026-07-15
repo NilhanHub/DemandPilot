@@ -1,5 +1,8 @@
 # DemandPilot
 
+> [!TIP]
+> See [ENGINEERING_OVERVIEW.md](ENGINEERING_OVERVIEW.md) for the full-stack architecture, AI and publishing boundaries, verification evidence, and current limitations.
+
 A keyword-to-content pipeline tool for managing multi-brand demand generation workflows. Built with Vite, React, TypeScript, Firebase Auth, Firestore, and a lightweight local Express API for server-side connector calls.
 
 ## Current Features
